@@ -1,38 +1,33 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TicketSystemAPI.Data;
-using TicketSystemAPI.Models;
-
+using TicketSystemAPI.Application.Interfaces;
+using TicketSystemAPI.Domain.Entities;
 
 namespace TicketSystemAPI.Controllers
-{
-[ApiController]
-[Route("api/[controller]")]
-public class TicketsController : ControllerBase
-{
-private readonly AppDbContext _context;
+{   [Authorize]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class TicketsController : ControllerBase
+    {
+        private readonly ITicketRepository _repository;
 
+        public TicketsController(ITicketRepository repository)
+        {
+            _repository = repository;
+        }
 
-public TicketsController(AppDbContext context)
-{
-_context = context;
-}
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var tickets = await _repository.GetAllAsync();
+            return Ok(tickets);
+        }
 
-
-[HttpGet]
-public async Task<IActionResult> GetAll()
-{
-var tickets = await _context.Tickets.Include(t => t.User).ToListAsync();
-return Ok(tickets);
-}
-
-
-[HttpPost]
-public async Task<IActionResult> Create(Ticket ticket)
-{
-_context.Tickets.Add(ticket);
-await _context.SaveChangesAsync();
-return Ok(ticket);
-}
-}
+        [HttpPost]
+        public async Task<IActionResult> Create(Ticket ticket)
+        {
+            await _repository.AddAsync(ticket);
+            return Ok(ticket);
+        }
+    }
 }
