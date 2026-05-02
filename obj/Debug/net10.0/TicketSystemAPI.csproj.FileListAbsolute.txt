@@ -264,3 +264,4 @@ C:\Users\josue\Downloads\ControlDesk-main\ControlDesk-main\obj\Debug\net10.0\swa
 C:\Users\josue\Downloads\ControlDesk-main\ControlDesk-main\obj\Debug\net10.0\TicketSy.0030CAD3.Up2Date
 C:\Users\josue\Downloads\ControlDesk-main\ControlDesk-main\obj\Debug\net10.0\TicketSystemAPI.genruntimeconfig.cache
 C:\Users\josue\Downloads\ControlDesk-main\ControlDesk-main\obj\Debug\net10.0\ref\TicketSystemAPI.dll
+C:\Users\josue\Downloads\ControlDesk-main\ControlDesk-main\obj\Debug\net10.0\TicketSystemAPI.sourcelink.json
