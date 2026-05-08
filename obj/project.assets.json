@@ -2950,23 +2950,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\josue\\.nuget\\packages\\": {},
+    "C:\\Users\\alexr\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\josue\\Downloads\\ControlDesk-main\\ControlDesk-main\\TicketSystemAPI.csproj",
+      "projectUniqueName": "C:\\Users\\alexr\\OneDrive\\Documentos\\proyecto web\\ControlDesk\\TicketSystemAPI.csproj",
       "projectName": "TicketSystemAPI",
-      "projectPath": "C:\\Users\\josue\\Downloads\\ControlDesk-main\\ControlDesk-main\\TicketSystemAPI.csproj",
-      "packagesPath": "C:\\Users\\josue\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\josue\\Downloads\\ControlDesk-main\\ControlDesk-main\\obj\\",
+      "projectPath": "C:\\Users\\alexr\\OneDrive\\Documentos\\proyecto web\\ControlDesk\\TicketSystemAPI.csproj",
+      "packagesPath": "C:\\Users\\alexr\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\alexr\\OneDrive\\Documentos\\proyecto web\\ControlDesk\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\josue\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\alexr\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
