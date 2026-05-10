@@ -15,6 +15,14 @@ namespace TicketSystemAPI.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // Schema PostgreSQL
+            modelBuilder.HasDefaultSchema("core");
+
+            // Tablas
+            modelBuilder.Entity<User>().ToTable("users");
+            modelBuilder.Entity<Ticket>().ToTable("tickets");
+            modelBuilder.Entity<TicketComment>().ToTable("ticket_comments");
+
             modelBuilder.Entity<Ticket>()
                 .HasOne(t => t.User)
                 .WithMany()

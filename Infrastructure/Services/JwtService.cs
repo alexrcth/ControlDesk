@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -26,53 +27,122 @@ namespace TicketSystemAPI.Infrastructure.Services
         {
             var jwtKey = _configuration["Jwt:Key"]
                 ?? throw new InvalidOperationException("Jwt:Key no esta configurado.");
+
             var key = Encoding.ASCII.GetBytes(jwtKey);
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Name),
+                new Claim(ClaimTypes.Name, user.FirstName),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Role, "User")
             };
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddHours(2),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
             };
+
             var handler = new JwtSecurityTokenHandler();
             var token = handler.CreateToken(tokenDescriptor);
+
             return handler.WriteToken(token);
         }
 
         public async Task<User> RegisterAsync(RegisterDto dto)
         {
-            var exists = await _context.Users.AnyAsync(u => u.Email == dto.Email.ToLower());
-            if (exists) throw new InvalidOperationException("El email ya esta registrado.");
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            await using var connection = new NpgsqlConnection(connectionString);
+
+            await connection.OpenAsync();
+
+            var checkCmd = new NpgsqlCommand(
+                "SELECT COUNT(*) FROM core.users WHERE email = @email",
+                connection);
+
+            checkCmd.Parameters.AddWithValue("email", dto.Email.ToLower().Trim());
+
+            var exists = (long)(await checkCmd.ExecuteScalarAsync() ?? 0);
+
+            if (exists > 0)
+                throw new InvalidOperationException("El email ya esta registrado.");
+
             var user = new User
             {
-                Name = dto.Name.Trim(),
+                Id = Guid.NewGuid(),
+                FirstName = dto.Name.Trim(),
+                LastName = "Default",
                 Email = dto.Email.ToLower().Trim(),
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                Role = "User"
+                PhoneNumber = "00000000",
+                DateOfBirth = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsActive = true
             };
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+
+            var insertCmd = new NpgsqlCommand(@"
+                INSERT INTO core.users
+                (
+                    id,
+                    first_name,
+                    last_name,
+                    email,
+                    phone_number,
+                    date_of_birth,
+                    created_at,
+                    updated_at,
+                    is_active
+                )
+                VALUES
+                (
+                    @id,
+                    @first_name,
+                    @last_name,
+                    @email,
+                    @phone_number,
+                    @date_of_birth,
+                    @created_at,
+                    @updated_at,
+                    @is_active
+                )",
+                connection);
+
+            insertCmd.Parameters.AddWithValue("id", user.Id);
+            insertCmd.Parameters.AddWithValue("first_name", user.FirstName);
+            insertCmd.Parameters.AddWithValue("last_name", user.LastName);
+            insertCmd.Parameters.AddWithValue("email", user.Email);
+            insertCmd.Parameters.AddWithValue("phone_number", user.PhoneNumber);
+            insertCmd.Parameters.AddWithValue("date_of_birth", user.DateOfBirth);
+            insertCmd.Parameters.AddWithValue("created_at", user.CreatedAt);
+            insertCmd.Parameters.AddWithValue("updated_at", user.UpdatedAt);
+            insertCmd.Parameters.AddWithValue("is_active", user.IsActive);
+
+            await insertCmd.ExecuteNonQueryAsync();
+
+            Console.WriteLine("Usuario registrado correctamente.");
+
             return user;
         }
 
         public async Task<User?> ValidateCredentialsAsync(LoginDto dto)
         {
             User? user = null;
+
             if (!string.IsNullOrEmpty(dto.Email))
-                user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email.ToLower().Trim());
-            if (user == null && !string.IsNullOrEmpty(dto.Username))
-                user = await _context.Users.FirstOrDefaultAsync(u => u.Name == dto.Username.Trim());
-            if (user == null) return null;
-            var passwordValida = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
-            return passwordValida ? user : null;
+            {
+                user = await _context.Users
+                    .FirstOrDefaultAsync(u =>
+                        u.Email == dto.Email.ToLower().Trim());
+            }
+
+            return user;
         }
     }
 }
