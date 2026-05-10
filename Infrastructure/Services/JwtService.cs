@@ -133,14 +133,47 @@ namespace TicketSystemAPI.Infrastructure.Services
 
         public async Task<User?> ValidateCredentialsAsync(LoginDto dto)
         {
-            User? user = null;
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
 
-            if (!string.IsNullOrEmpty(dto.Email))
+            await using var connection = new NpgsqlConnection(connectionString);
+
+            await connection.OpenAsync();
+
+            var cmd = new NpgsqlCommand(@"
+                SELECT
+                    id,
+                    first_name,
+                    last_name,
+                    email,
+                    phone_number,
+                    date_of_birth,
+                    created_at,
+                    updated_at,
+                    is_active
+                FROM core.users
+                WHERE email = @email
+                LIMIT 1",
+                connection);
+
+            cmd.Parameters.AddWithValue("email", dto.Email.ToLower().Trim());
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+
+            if (!await reader.ReadAsync())
+                return null;
+
+            var user = new User
             {
-                user = await _context.Users
-                    .FirstOrDefaultAsync(u =>
-                        u.Email == dto.Email.ToLower().Trim());
-            }
+                Id = reader.GetGuid(0),
+                FirstName = reader.GetString(1),
+                LastName = reader.GetString(2),
+                Email = reader.GetString(3),
+                PhoneNumber = reader.GetString(4),
+                DateOfBirth = reader.GetDateTime(5),
+                CreatedAt = reader.GetDateTime(6),
+                UpdatedAt = reader.GetDateTime(7),
+                IsActive = reader.GetBoolean(8)
+            };
 
             return user;
         }
