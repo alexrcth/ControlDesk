@@ -1,87 +1,114 @@
-﻿using Microsoft.EntityFrameworkCore;
-using TicketSystemAPI.Infrastructure.Data;
-using TicketSystemAPI.Application.Interfaces;
-using TicketSystemAPI.Infrastructure.Repositories;
-using TicketSystemAPI.Infrastructure.Services;
-using TicketSystemAPI.Domain.Entities;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using TicketSystemAPI.Infrastructure.Data;
+using TicketSystemAPI.Application.Interfaces;
+using TicketSystemAPI.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
+
+builder.Services.AddScoped<IAuthService, JwtService>();
+
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtKey!)
+            )
+        };
+    });
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+
 builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TicketSystem API", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "ControlDesk API",
+        Version = "v1"
+    });
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer",
-        BearerFormat = "JWT", In = ParameterLocation.Header, Description = "Escribe tu token JWT"
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Ingresa el token JWT"
     });
+
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        { new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }, new string[] {} }
-    });
-});
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-    builder.Configuration.GetConnectionString("DefaultConnection"),
-     npgsqlOptions =>
         {
-            npgsqlOptions.CommandTimeout(30);
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
         }
-));
-builder.Services.AddScoped<ITicketRepository, TicketRepository>();
-builder.Services.AddScoped<IAuthService, JwtService>();
-
-var jwtKey = builder.Configuration["Jwt:Key"]!;
-var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
-var jwtAudience = builder.Configuration["Jwt:Audience"]!;
-var key = Encoding.ASCII.GetBytes(jwtKey);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = true, ValidIssuer = jwtIssuer,
-        ValidateAudience = true, ValidAudience = jwtAudience,
-        ValidateLifetime = true, ClockSkew = TimeSpan.Zero
-    };
+    });
 });
 
 var app = builder.Build();
-/*
-using (var scope = app.Services.CreateScope())
+
+
+if (app.Environment.IsDevelopment())
 {
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (!context.Users.Any(u => u.Role == "Admin"))
-    {
-        context.Users.Add(new User
-        {
-            Name = "admin", Email = "admin@controldesk.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"), Role = "Admin"
-        });
-        context.SaveChanges();
-        Console.WriteLine("Usuario Admin inicial creado: admin@controldesk.com / Admin123!");
-    }
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
-*/
-app.UseSwagger();
-app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "TicketSystem API v1"); c.RoutePrefix = "swagger"; });
+
+app.UseHttpsRedirection();
+
+app.UseCors("AllowFrontend");
+
 app.UseAuthentication();
+
 app.UseAuthorization();
+
 app.MapControllers();
+
 app.Run();

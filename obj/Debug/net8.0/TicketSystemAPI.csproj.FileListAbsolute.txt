@@ -143,3 +143,7 @@ C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\
 C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\obj\Debug\net8.0\TicketSystemAPI.pdb
 C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\obj\Debug\net8.0\TicketSystemAPI.genruntimeconfig.cache
 C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\obj\Debug\net8.0\ref\TicketSystemAPI.dll
+C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\bin\Debug\net8.0\controldesk-project\jsconfig.json
+C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\bin\Debug\net8.0\controldesk-project\package-lock.json
+C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\bin\Debug\net8.0\controldesk-project\package.json
+C:\Users\z0052d3t\OneDrive - Siemens AG\Universidad\Programación\ControlDesk-1\bin\Debug\net8.0\package-lock.json
