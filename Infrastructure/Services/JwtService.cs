@@ -30,26 +30,35 @@ namespace TicketSystemAPI.Infrastructure.Services
 
             var key = Encoding.ASCII.GetBytes(jwtKey);
 
+            var role = user.UserRoles
+                .FirstOrDefault()?.Role?.Name ?? "CLIENT";
+
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.FirstName),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, "User")
+                new Claim(ClaimTypes.Role, role)
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
+
                 Expires = DateTime.UtcNow.AddHours(2),
+
                 Issuer = _configuration["Jwt:Issuer"],
+
                 Audience = _configuration["Jwt:Audience"],
+
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key),
                     SecurityAlgorithms.HmacSha256Signature)
             };
 
             var handler = new JwtSecurityTokenHandler();
+
             var token = handler.CreateToken(tokenDescriptor);
 
             return handler.WriteToken(token);
@@ -57,33 +66,51 @@ namespace TicketSystemAPI.Infrastructure.Services
 
         public async Task<User> RegisterAsync(RegisterDto dto)
         {
-            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            var connectionString =
+                _configuration.GetConnectionString("DefaultConnection");
 
-            await using var connection = new NpgsqlConnection(connectionString);
+            await using var connection =
+                new NpgsqlConnection(connectionString);
 
             await connection.OpenAsync();
+
 
             var checkCmd = new NpgsqlCommand(
                 "SELECT COUNT(*) FROM core.users WHERE email = @email",
                 connection);
 
-            checkCmd.Parameters.AddWithValue("email", dto.Email.ToLower().Trim());
+            checkCmd.Parameters.AddWithValue(
+                "email",
+                dto.Email.ToLower().Trim());
 
-            var exists = (long)(await checkCmd.ExecuteScalarAsync() ?? 0);
+            var exists =
+                (long)(await checkCmd.ExecuteScalarAsync() ?? 0);
 
             if (exists > 0)
-                throw new InvalidOperationException("El email ya esta registrado.");
+            {
+                throw new InvalidOperationException(
+                    "El email ya esta registrado.");
+            }
+
 
             var user = new User
             {
                 Id = Guid.NewGuid(),
+
                 FirstName = dto.Name.Trim(),
+
                 LastName = "Default",
+
                 Email = dto.Email.ToLower().Trim(),
+
                 PhoneNumber = "00000000",
+
                 DateOfBirth = DateTime.UtcNow,
+
                 CreatedAt = DateTime.UtcNow,
+
                 UpdatedAt = DateTime.UtcNow,
+
                 IsActive = true
             };
 
@@ -115,65 +142,62 @@ namespace TicketSystemAPI.Infrastructure.Services
                 connection);
 
             insertCmd.Parameters.AddWithValue("id", user.Id);
-            insertCmd.Parameters.AddWithValue("first_name", user.FirstName);
-            insertCmd.Parameters.AddWithValue("last_name", user.LastName);
-            insertCmd.Parameters.AddWithValue("email", user.Email);
-            insertCmd.Parameters.AddWithValue("phone_number", user.PhoneNumber);
-            insertCmd.Parameters.AddWithValue("date_of_birth", user.DateOfBirth);
-            insertCmd.Parameters.AddWithValue("created_at", user.CreatedAt);
-            insertCmd.Parameters.AddWithValue("updated_at", user.UpdatedAt);
-            insertCmd.Parameters.AddWithValue("is_active", user.IsActive);
+
+            insertCmd.Parameters.AddWithValue(
+                "first_name",
+                user.FirstName);
+
+            insertCmd.Parameters.AddWithValue(
+                "last_name",
+                user.LastName);
+
+            insertCmd.Parameters.AddWithValue(
+                "email",
+                user.Email);
+
+            insertCmd.Parameters.AddWithValue(
+                "phone_number",
+                user.PhoneNumber);
+
+            insertCmd.Parameters.AddWithValue(
+                "date_of_birth",
+                user.DateOfBirth);
+
+            insertCmd.Parameters.AddWithValue(
+                "created_at",
+                user.CreatedAt);
+
+            insertCmd.Parameters.AddWithValue(
+                "updated_at",
+                user.UpdatedAt);
+
+            insertCmd.Parameters.AddWithValue(
+                "is_active",
+                user.IsActive);
 
             await insertCmd.ExecuteNonQueryAsync();
 
-            Console.WriteLine("Usuario registrado correctamente.");
+            Console.WriteLine(
+                "Usuario registrado correctamente.");
 
             return user;
         }
 
         public async Task<User?> ValidateCredentialsAsync(LoginDto dto)
         {
-            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            var user = await _context.Users
 
-            await using var connection = new NpgsqlConnection(connectionString);
+                .Include(u => u.UserRoles)
 
-            await connection.OpenAsync();
+                .ThenInclude(ur => ur.Role)
 
-            var cmd = new NpgsqlCommand(@"
-                SELECT
-                    id,
-                    first_name,
-                    last_name,
-                    email,
-                    phone_number,
-                    date_of_birth,
-                    created_at,
-                    updated_at,
-                    is_active
-                FROM core.users
-                WHERE email = @email
-                LIMIT 1",
-                connection);
+                .FirstOrDefaultAsync(u =>
+                    u.Email == dto.Email.ToLower().Trim());
 
-            cmd.Parameters.AddWithValue("email", dto.Email.ToLower().Trim());
-
-            await using var reader = await cmd.ExecuteReaderAsync();
-
-            if (!await reader.ReadAsync())
-                return null;
-
-            var user = new User
+            if (user == null)
             {
-                Id = reader.GetGuid(0),
-                FirstName = reader.GetString(1),
-                LastName = reader.GetString(2),
-                Email = reader.GetString(3),
-                PhoneNumber = reader.GetString(4),
-                DateOfBirth = reader.GetDateTime(5),
-                CreatedAt = reader.GetDateTime(6),
-                UpdatedAt = reader.GetDateTime(7),
-                IsActive = reader.GetBoolean(8)
-            };
+                return null;
+            }
 
             return user;
         }

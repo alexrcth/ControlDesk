@@ -33,5 +33,8 @@ namespace TicketSystemAPI.Domain.Entities
 
         [Column("is_active")]
         public bool IsActive { get; set; }
+
+        public ICollection<UserRole> UserRoles { get; set; }
+            = new List<UserRole>();
     }
 }
